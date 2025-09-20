@@ -33,33 +33,166 @@
     </div>
     
     <script>
-        function getCategories() {
+
+        const BASE_URL = "http://localhost:3000";
+
+        async function getCategories() {
             // Fetch categories from the server using Axios
             // and display them in the select element
             // url: http://localhost:3010/categories
+            const out = document.getElementById("itemsList");
 
+            // Clear and show loading
+            clearElement(out);
+            const loading = document.createElement("p");
+            loading.className = "text-center m-0";
+            loading.innerText = "Loading categories…";
+            out.appendChild(loading);
+
+            try {
+                const res = await axios.get(`${BASE_URL}/categories`);
+                showCategories(res.data);
+
+                clearElement(out);
+                const msg = document.createElement("p");
+                msg.className = "text-center m-0";
+                msg.innerText = "Pick a category to view items";
+                out.appendChild(msg);
+            } catch (err) {
+                clearElement(out);
+                const error = document.createElement("p");
+                error.className = "text-danger text-center m-0";
+                error.innerText = "Failed to load categories: " + err.message;
+                out.appendChild(error);
+            }
         }
 
         function showCategories(categories) {
             // Display the categories in the select element
-            
+            const sel = document.getElementById("selectCategory");
+
+            // Remove extras but keep "To select" and "All"
+            while (sel.options.length > 2) sel.remove(2);
+
+            for (const cat of categories) {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.innerText = cat;
+                sel.appendChild(opt);
+            }
         }
 
-        function getItems() {
+        async function getItems() {
             // Fetch items based on the selected category
             // If "To select" is chosen, do nothing
             // If "All" is chosen, fetch all items
             // If a specific category is chosen, fetch items for that category
             // url: http://localhost:3010/items?category=categoryName
-            
+            const sel = document.getElementById("selectCategory");
+            const value = sel.value;
+            const out = document.getElementById("itemsList");
+
+            clearElement(out);
+
+            if (value === "0") {
+                const p = document.createElement("p");
+                p.className = "text-center m-0";
+                p.innerText = "No items";
+                out.appendChild(p);
+                return;
+            }
+
+            const loading = document.createElement("p");
+            loading.className = "text-center m-0";
+            loading.innerText = "Loading items…";
+            out.appendChild(loading);
+
+            try {
+                let res;
+                if (value === "all") {
+                    res = await axios.get(`${BASE_URL}/items`);
+                } 
+                else {
+                    res = await axios.get(`${BASE_URL}/items`, { params: { category: value } });
+                }
+                showItems(res.data);
+            } 
+            catch (err) {
+                clearElement(out);
+                const p = document.createElement("p");
+                p.className = "text-center text-muted m-0";
+                p.innerText = "No items";
+                out.appendChild(p);
+            }
         }
 
         function showItems(items) {
             // Display the items in the itemsList div
             // Each item should be displayed in a bootstrap card format
             // The display should be responsive 3 columns on large screens, 2 columns on medium screens, and 1 column on small screens
-            
+            const out = document.getElementById("itemsList");
+            clearElement(out);
 
+            if (!Array.isArray(items) || items.length === 0) {
+                const p = document.createElement("p");
+                p.className = "text-center text-muted m-0";
+                p.innerText = "No items";
+                out.appendChild(p);
+                return;
+            }
+
+            for (const item of items) {
+                const col = document.createElement("div");
+                col.classList.add("col-12", "col-md-6", "col-lg-4", "mb-3");
+
+                const card = document.createElement("div");
+                card.classList.add("card", "h-100");
+
+                // Image
+                const imgUrl = item.image || "https://via.placeholder.com/600x360?text=No+Image";
+                const img = document.createElement("img");
+                img.className = "card-img-top";
+                img.alt = item.name || "Item image";
+                img.src = imgUrl;
+                card.appendChild(img);
+
+                const body = document.createElement("div");
+                body.classList.add("card-body", "d-flex", "flex-column");
+
+                const title = document.createElement("h5");
+                title.classList.add("card-title", "mb-1");
+                title.innerText = item.name ?? "Unnamed";
+
+                const catP = document.createElement("p");
+                catP.classList.add("card-text", "text-muted", "mb-2");
+                catP.innerText = item.category ?? "";
+
+                const priceP = document.createElement("p");
+                priceP.classList.add("card-text", "fw-semibold", "mb-3");
+                const price =
+                    typeof item.price === "number"
+                    ? `$${item.price.toFixed(2)}`
+                    : item.price
+                    ? `$${item.price}`
+                    : "—";
+                priceP.innerText = price;
+
+                const btn = document.createElement("button");
+                btn.classList.add("btn", "btn-primary", "mt-auto");
+                btn.innerText = "Add to Cart";
+                btn.addEventListener("click", () => {
+                    alert(`Added ${item.name ?? "item"} to cart!`);
+                });
+
+                body.append(title, catP, priceP, btn);
+                card.appendChild(body);
+                col.appendChild(card);
+                out.appendChild(col);
+            }
+        }
+
+        function clearElement(el) {
+            while (el.firstChild) el.removeChild(el.firstChild);
         }
 
     </script>
